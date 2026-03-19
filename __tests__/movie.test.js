@@ -31,7 +31,6 @@ const mockPrisma = {
     findUnique: jest.fn(),
     create: jest.fn(),
     updateMany: jest.fn(),
-    update: jest.fn(),
     deleteMany: jest.fn(),
   },
 };
@@ -53,7 +52,7 @@ const prisma = require('../lib/prisma');
 // ============================================
 // SUITE DE TESTS: API DE PELÍCULAS
 // ============================================
-describe('API de Películas', () => {
+describe('API de Películas (CRUD)', () => {
   // Limpiar todos los mocks después de cada test
   afterEach(() => {
     jest.clearAllMocks();
@@ -73,6 +72,8 @@ describe('API de Películas', () => {
           director: 'Christopher Nolan',
           year: 2010,
           posterUrl: 'https://example.com/inception.jpg',
+          isFavorite: false,
+          rating: 0,
           ownerId: 'user-123',
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -83,6 +84,8 @@ describe('API de Películas', () => {
           director: 'Wachowski Sisters',
           year: 1999,
           posterUrl: 'https://example.com/matrix.jpg',
+          isFavorite: false,
+          rating: 0,
           ownerId: 'user-123',
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -135,6 +138,8 @@ describe('API de Películas', () => {
         director: 'Christopher Nolan',
         year: 2010,
         posterUrl: 'https://example.com/inception.jpg',
+        isFavorite: false,
+        rating: 0,
         ownerId: 'user-123',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -183,6 +188,8 @@ describe('API de Películas', () => {
         director: 'Christopher Nolan',
         year: 2014,
         posterUrl: 'https://example.com/interstellar.jpg',
+        isFavorite: false,
+        rating: 0,
         ownerId: 'user-123',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -216,6 +223,8 @@ describe('API de Películas', () => {
         director: 'Christopher Nolan',
         year: 2017,
         posterUrl: null,
+        isFavorite: false,
+        rating: 0,
         ownerId: 'user-123',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -253,6 +262,8 @@ describe('API de Películas', () => {
         director: 'Christopher Nolan',
         year: 2010,
         posterUrl: 'https://example.com/inception-dc.jpg',
+        isFavorite: false,
+        rating: 0,
         ownerId: 'user-123',
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -342,133 +353,6 @@ describe('API de Películas', () => {
       expect(response.body.error).toBe('Película no encontrada');
     });
   });
-
-  // =====================================================
-  // TESTS DE MARCAR/DESMARCAR FAVORITOS
-  // =====================================================
-  describe('PATCH /api/movies/:id/favorite', () => {
-    
-    it('debería marcar una película como favorita', async () => {
-      // ARRANGE
-      const movieMock = {
-        id: 'movie-1',
-        title: 'Inception',
-        director: 'Christopher Nolan',
-        year: 2010,
-        posterUrl: 'https://example.com/inception.jpg',
-        isFavorite: false,
-        ownerId: 'user-123',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const updatedMovieMock = { ...movieMock, isFavorite: true };
-
-      prisma.movie.findFirst.mockResolvedValue(movieMock);
-      prisma.movie.update.mockResolvedValue(updatedMovieMock);
-
-      // ACT
-      const response = await request(app)
-        .patch('/api/movies/movie-1/favorite')
-        .set('Authorization', 'Bearer fake-token');
-
-      // ASSERT
-      expect(response.status).toBe(200);
-      expect(response.body.isFavorite).toBe(true);
-      expect(prisma.movie.findFirst).toHaveBeenCalledWith({
-        where: { id: 'movie-1', ownerId: 'user-123' },
-      });
-    });
-
-    it('debería desmarcar una película como favorita', async () => {
-      // ARRANGE
-      const movieMock = {
-        id: 'movie-1',
-        title: 'Inception',
-        director: 'Christopher Nolan',
-        year: 2010,
-        posterUrl: 'https://example.com/inception.jpg',
-        isFavorite: true,
-        ownerId: 'user-123',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      const updatedMovieMock = { ...movieMock, isFavorite: false };
-
-      prisma.movie.findFirst.mockResolvedValue(movieMock);
-      prisma.movie.update.mockResolvedValue(updatedMovieMock);
-
-      // ACT
-      const response = await request(app)
-        .patch('/api/movies/movie-1/favorite')
-        .set('Authorization', 'Bearer fake-token');
-
-      // ASSERT
-      expect(response.status).toBe(200);
-      expect(response.body.isFavorite).toBe(false);
-    });
-
-    it('debería devolver 404 si la película no existe', async () => {
-      // ARRANGE
-      prisma.movie.findFirst.mockResolvedValue(null);
-
-      // ACT
-      const response = await request(app)
-        .patch('/api/movies/movie-999/favorite')
-        .set('Authorization', 'Bearer fake-token');
-
-      // ASSERT
-      expect(response.status).toBe(404);
-      expect(response.body.error).toBe('Película no encontrada');
-    });
-
-    it('debería devolver 404 si la película pertenece a otro usuario', async () => {
-      // ARRANGE
-      // findFirst devuelve null porque la película existe pero no pertenece al usuario
-      prisma.movie.findFirst.mockResolvedValue(null);
-
-      // ACT
-      const response = await request(app)
-        .patch('/api/movies/movie-otro-usuario/favorite')
-        .set('Authorization', 'Bearer fake-token');
-
-      // ASSERT
-      expect(response.status).toBe(404);
-      expect(response.body.error).toBe('Película no encontrada');
-      expect(prisma.movie.findFirst).toHaveBeenCalledWith({
-        where: { id: 'movie-otro-usuario', ownerId: 'user-123' },
-      });
-    });
-
-    it('debería devolver 500 si ocurre un error en el servidor', async () => {
-      // ARRANGE
-      const movieMock = {
-        id: 'movie-1',
-        title: 'Inception',
-        director: 'Christopher Nolan',
-        year: 2010,
-        posterUrl: 'https://example.com/inception.jpg',
-        isFavorite: false,
-        ownerId: 'user-123',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-
-      prisma.movie.findFirst.mockResolvedValue(movieMock);
-      // Simular un error en la actualización
-      prisma.movie.update.mockRejectedValue(new Error('Error en la base de datos'));
-
-      // ACT
-      const response = await request(app)
-        .patch('/api/movies/movie-1/favorite')
-        .set('Authorization', 'Bearer fake-token');
-
-      // ASSERT
-      expect(response.status).toBe(500);
-      expect(response.body.error).toBe('Error al actualizar favorito');
-    });
-  });
 });
 
 /**
@@ -496,7 +380,8 @@ describe('API de Películas', () => {
  *    con ownerId: 'user-123'. Esto asegura que un usuario
  *    solo puede ver/modificar SUS películas.
  * 
- * 5. TU EJERCICIO (rating.test.js):
- *    Usa este archivo como referencia para crear los tests
- *    del endpoint PATCH /api/movies/:id/rating
+ * 5. TESTS DE FAVORITOS Y RATING:
+ *    Los tests para estas funcionalidades están en archivos aparte:
+ *    - favorite.test.js: Tests para marcar/desmarcar favoritos
+ *    - rating.test.js: Tests para actualizar el rating
  */
