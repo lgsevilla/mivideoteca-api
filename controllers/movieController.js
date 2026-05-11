@@ -129,3 +129,43 @@ exports.toggleFavorite = async (req, res) => {
     res.status(500).json({ error: 'Error al actualizar favorito' });
   }
 };
+
+// PATCH /api/movies/:id/rating - Actualiza la puntuación de una película
+exports.updateRating = async (req, res) => {
+  const { id } = req.params;
+  const { rating } = req.body;
+
+  try {
+    // 1. Validar que el rating es un número entre 0 y 5
+    if (rating === undefined || rating === null) {
+      return res.status(400).json({ error: 'El campo rating es requerido' });
+    }
+
+    if (typeof rating !== 'number' || !Number.isInteger(rating)) {
+      return res.status(400).json({ error: 'El rating debe ser un número entero' });
+    }
+
+    if (rating < 0 || rating > 5) {
+      return res.status(400).json({ error: 'El rating debe estar entre 0 y 5' });
+    }
+
+    // 2. Buscar la película para verificar que pertenece al usuario
+    const movie = await prisma.movie.findFirst({
+      where: { id, ownerId: req.user.userId },
+    });
+
+    if (!movie) {
+      return res.status(404).json({ error: 'Película no encontrada' });
+    }
+
+    // 3. Actualizar el rating
+    const updatedMovie = await prisma.movie.update({
+      where: { id },
+      data: { rating },
+    });
+
+    res.json(updatedMovie);
+  } catch (error) {
+    res.status(500).json({ error: 'Error al actualizar el rating' });
+  }
+};
