@@ -36,7 +36,11 @@ exports.register = async (req, res) => {
       return res.status(400).json({ error: 'El email ya existe' });
     }
 
-    res.status(500).json({ error: 'Error al registrar el usuario' });
+    res.status(500).json({ 
+      error: 'Error al registrar el usuario',
+      details: error.message,  // Información adicional para debugging
+      code: error.code,        // Código de error específico de Prisma
+    });
   }
 };
 
